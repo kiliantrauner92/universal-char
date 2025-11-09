@@ -78,6 +78,20 @@ export function Scripttyper() {
     setInput('')
   }
 
+  // Global key capture so the player can type without focusing an input
+  useEffect(() => {
+    if (run.status !== 'active' || !run.text || alarm.pending) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+      if (e.key.length === 1) {
+        e.preventDefault()
+        typeChar(e.key)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [run.status, run.text, alarm.pending, typeChar])
+
   const elapsed = useMemo(() => {
     if (run.status !== 'active' || !run.startedAt) return 0
     return Date.now() - run.startedAt
