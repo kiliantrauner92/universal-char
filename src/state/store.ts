@@ -220,10 +220,13 @@ export const useGame = create<GameState>()(
           lastAward: { amount: score.charsAwarded, ts: endedAt },
           comments: { queue: s.comments.queue.concat(msgs) },
         })
-        // immediately open next text if paper remains (or alarm will handle special runs)
-        if (get().player.paper > 0) get().startRun()
-        // check alarms after awarding
-        get().maybeTriggerAlarms()
+        // small delay to let the player see awards/comments before next text
+        setTimeout(() => {
+          const p = get().player
+          if (p.paper > 0) get().startRun()
+          // check alarms after awarding
+          get().maybeTriggerAlarms()
+        }, 1800)
       },
 
       buyItem: (id: string) => {
