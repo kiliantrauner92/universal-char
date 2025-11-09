@@ -113,7 +113,7 @@ export const useGame = create<GameState>()(
         const idx = Math.floor(Math.random() * texts.length)
         const text = texts[idx]
         set({
-          run: { status: 'active', text, typed: '', correct: 0, wrong: 0, startedAt: Date.now(), alarm: !!opts?.alarm, timeLimitSec: opts?.timeLimitSec },
+          run: { status: 'active', text, typed: '', correct: 0, wrong: 0, startedAt: undefined, alarm: !!opts?.alarm, timeLimitSec: opts?.timeLimitSec },
         })
       },
 
@@ -126,6 +126,7 @@ export const useGame = create<GameState>()(
         set({
           run: {
             ...run,
+            startedAt: run.startedAt ?? Date.now(),
             typed: run.typed + ch,
             correct: run.correct + (correct ? 1 : 0),
             wrong: run.wrong + (correct ? 0 : 1),

@@ -29,6 +29,7 @@ export function Scripttyper() {
 
   const [input, setInput] = useState('')
   const [showAward, setShowAward] = useState(false)
+  const [tick, setTick] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
 
   // Always keep a text open when possible (after welcome complete and no pending alarm)
@@ -97,10 +98,17 @@ export function Scripttyper() {
     return () => window.removeEventListener('keydown', onKey)
   }, [run.status, run.text, alarm.pending, typeChar])
 
+  // drive a periodic re-render while active
+  useEffect(() => {
+    if (run.status !== 'active' || !run.startedAt) return
+    const id = setInterval(() => setTick(t => (t + 1) % 100000), 250)
+    return () => clearInterval(id)
+  }, [run.status, run.startedAt])
+
   const elapsed = useMemo(() => {
     if (run.status !== 'active' || !run.startedAt) return 0
     return Date.now() - run.startedAt
-  }, [run.status, run.startedAt])
+  }, [run.status, run.startedAt, tick])
 
   return (
     <section className="relative bg-surface p-4 rounded">
