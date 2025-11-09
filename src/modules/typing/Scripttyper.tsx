@@ -26,9 +26,9 @@ export function Scripttyper() {
 
   const onChange = (v: string) => {
     if (run.status !== 'active' || !run.text) return
-    const nextChar = v[run.typed.length]
-    if (!nextChar) return
-    typeChar(nextChar)
+    const ch = v.slice(-1) // take the last typed character (we clear after each)
+    if (!ch) return
+    typeChar(ch)
     setInput('')
   }
 
