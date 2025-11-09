@@ -71,6 +71,7 @@ export type Player = {
   chars: number
   lifetimeChars: number
   money: number
+  paper: number
   inventory: Inventory
   prices: Prices
   skips: number

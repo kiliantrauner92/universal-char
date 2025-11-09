@@ -131,6 +131,8 @@ export function Scripttyper() {
 
       {!hasTexts ? (
         <p className="text-muted">Loading texts...</p>
+      ) : player.paper <= 0 ? (
+        <p className="text-muted">Out of paper. Buy more in Business.</p>
       ) : run.status === 'active' && run.text ? (
         <div className="space-y-3">
           <div className="text-muted text-sm">{run.text.title} • {run.text.genre}</div>

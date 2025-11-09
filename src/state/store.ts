@@ -46,6 +46,7 @@ type GameState = {
   craftBook: (count?: number) => void
   sellArticle: (count?: number) => void
   sellBook: (count?: number) => void
+  buyPaper: () => void
   adjustPrice: (kind: 'article' | 'book', dir: 'up' | 'down') => void
 }
 
@@ -69,6 +70,7 @@ function defaultPlayer(): Player {
     chars: 0,
     lifetimeChars: 0,
     money: 0,
+    paper: 100,
     inventory: { articles: 0, books: 0 },
     prices: defaultPrices(),
     skips: 5,
@@ -108,8 +110,9 @@ export const useGame = create<GameState>()(
       },
 
       startRun: (opts) => {
-        const { texts } = get()
+        const { texts, player } = get()
         if (!texts.length) return
+        if (!opts?.alarm && player.paper <= 0) return // require paper for normal runs
         const idx = Math.floor(Math.random() * texts.length)
         const text = texts[idx]
         set({
@@ -165,6 +168,7 @@ export const useGame = create<GameState>()(
           chars: s.player.chars + score.charsAwarded,
           lifetimeChars: s.player.lifetimeChars + score.charsAwarded,
           skips: s.player.skips + 1, // +1 per completed text
+          paper: Math.max(0, s.player.paper - 1),
         }
 
         const lifetimeRuns = s.lifetimeRuns + 1
@@ -188,8 +192,8 @@ export const useGame = create<GameState>()(
           lifetimeRuns,
           lastAward: { amount: score.charsAwarded, ts: endedAt },
         })
-        // immediately open next text
-        get().startRun()
+        // immediately open next text if paper remains (or alarm will handle special runs)
+        if (get().player.paper > 0) get().startRun()
         // check alarms after awarding
         get().maybeTriggerAlarms()
       },
@@ -278,6 +282,13 @@ export const useGame = create<GameState>()(
             },
           },
         })
+      },
+
+      buyPaper: () => {
+        const s = get()
+        const cost = 10
+        if (s.player.money < cost) return
+        set({ player: { ...s.player, money: s.player.money - cost, paper: s.player.paper + 100 } })
       },
 
       maybeTriggerAlarms: () => {

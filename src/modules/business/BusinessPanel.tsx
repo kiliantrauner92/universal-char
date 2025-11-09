@@ -7,6 +7,7 @@ export function BusinessPanel() {
   const sellArticle = useGame(s => s.sellArticle)
   const sellBook = useGame(s => s.sellBook)
   const adjustPrice = useGame(s => s.adjustPrice)
+  const buyPaper = useGame(s => s.buyPaper)
 
   return (
     <section className="bg-surface p-4 rounded">
@@ -19,6 +20,18 @@ export function BusinessPanel() {
       </div>
 
       <div className="space-y-4">
+        <div className="p-3 rounded bg-surface2">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="font-medium">Paper</div>
+              <div className="text-muted text-sm">Sheets: {p.paper}</div>
+              <div className="text-muted text-xs">100 sheets cost 10 money</div>
+            </div>
+            <div>
+              <button className="px-3 py-1 rounded bg-accent text-black disabled:opacity-50" onClick={buyPaper} disabled={p.money < 10}>Buy 100</button>
+            </div>
+          </div>
+        </div>
         <div className="p-3 rounded bg-surface2">
           <div className="flex items-center justify-between">
             <div>
