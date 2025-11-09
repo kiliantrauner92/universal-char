@@ -108,13 +108,6 @@ export function Scripttyper() {
         </div>
       </div>
 
-      {/* Award overlay */}
-      {showAward && lastAward ? (
-        <div className="pointer-events-none absolute right-4 top-4 text-accent text-3xl font-bold transition-all duration-700 transform animate-pulse">
-          +{lastAward.amount}
-        </div>
-      ) : null}
-
       {/* Alarm countdown overlay */}
       {alarm.pending ? (
         <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center z-10">
@@ -133,11 +126,17 @@ export function Scripttyper() {
               <CharSpan key={i} ch={ch} typed={run.typed[i]} />
             ))}
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <div><div className="text-muted text-sm">Correct</div><div className="text-success text-xl">{run.correct}</div></div>
             <div><div className="text-muted text-sm">Wrong</div><div className="text-danger text-xl">{run.wrong}</div></div>
             <div><div className="text-muted text-sm">Typed</div><div className="text-xl">{run.typed.length}/{run.text.body.length}</div></div>
             <div><div className="text-muted text-sm">Time</div><div className="text-xl">{Math.floor(elapsed/1000)}s{run.timeLimitSec ? ` / ${run.timeLimitSec}s` : ''}</div></div>
+            <div>
+              <div className="text-muted text-sm">Earned</div>
+              <div className={showAward ? "text-accent text-xl animate-pulse" : "text-muted text-xl"}>
+                {showAward && lastAward ? `+${lastAward.amount}` : '\u00A0'}
+              </div>
+            </div>
           </div>
           <input
             ref={inputRef}
