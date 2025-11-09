@@ -108,15 +108,16 @@ export function Scripttyper() {
   }, [run.status, run.startedAt])
 
   const elapsed = useMemo(() => {
-    if (run.status !== 'active' || !run.startedAt) return 0
-    return Date.now() - run.startedAt
-  }, [run.status, run.startedAt, tick])
+    if (!run.startedAt) return 0
+    const end = run.endedAt ?? Date.now()
+    return end - run.startedAt
+  }, [run.startedAt, run.endedAt, tick])
 
   const cps = useMemo(() => {
-    if (run.status !== 'active' || !run.startedAt) return 0
+    if (!run.startedAt) return 0
     const secs = Math.max(0.001, elapsed / 1000)
     return run.correct / secs
-  }, [run.status, run.startedAt, elapsed, run.correct])
+  }, [elapsed, run.startedAt, run.correct])
 
   // Performance comments display
   const [showComment, setShowComment] = useState(false)
@@ -155,11 +156,7 @@ export function Scripttyper() {
         </div>
       ) : null}
 
-      {!hasTexts ? (
-        <p className="text-muted">Loading texts...</p>
-      ) : player.paper <= 0 ? (
-        <p className="text-muted">Out of paper. Buy more in Business.</p>
-      ) : run.status === 'active' && run.text ? (
+      {run.text && (run.status === 'active' || run.status === 'finished') ? (
         <div className="space-y-3">
           <div className="text-muted text-sm">{run.text.title} • {run.text.genre}</div>
           <div className="p-4 rounded bg-surface2 font-mono text-lg leading-relaxed">
@@ -184,6 +181,10 @@ export function Scripttyper() {
             ref={inputRef}
             className="w-0 h-0 opacity-0" aria-hidden value={input} onChange={e => onChange(e.target.value)} />
         </div>
+      ) : !hasTexts ? (
+        <p className="text-muted">Loading texts...</p>
+      ) : player.paper <= 0 ? (
+        <p className="text-muted">Out of paper. Buy more in Business.</p>
       ) : (
         <p className="text-muted">Waiting for the next text...</p>
       )}
