@@ -11,6 +11,7 @@ export function Scripttyper() {
   const run = useGame(s => s.run)
   const player = useGame(s => s.player)
   const items = useGame(s => s.items)
+  const hasTexts = useGame(s => s.texts.length > 0)
   const start = useGame(s => s.startRun)
   const typeChar = useGame(s => s.typeChar)
   const skip = useGame(s => s.skipText)
@@ -27,8 +28,8 @@ export function Scripttyper() {
 
   // Always keep a text open when possible (after welcome complete and no pending alarm)
   useEffect(() => {
-    if (player.welcomeComplete && !alarm.pending && run.status === 'idle') start()
-  }, [player.welcomeComplete, alarm.pending, run.status, start])
+    if (player.welcomeComplete && !alarm.pending && run.status === 'idle' && hasTexts) start()
+  }, [player.welcomeComplete, alarm.pending, run.status, hasTexts, start])
 
   // Focus typing input when active
   useEffect(() => {
@@ -108,7 +109,9 @@ export function Scripttyper() {
         </div>
       ) : null}
 
-      {run.status === 'active' && run.text ? (
+      {!hasTexts ? (
+        <p className="text-muted">Loading texts...</p>
+      ) : run.status === 'active' && run.text ? (
         <div className="space-y-3">
           <div className="text-muted text-sm">{run.text.title} • {run.text.genre}</div>
           <div className="p-4 rounded bg-surface2 font-mono text-lg leading-relaxed">
