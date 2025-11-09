@@ -14,6 +14,7 @@ export type RunState = {
   correct: number
   wrong: number
   alarm?: boolean
+  timeLimitSec?: number
 }
 
 type GameState = {
@@ -24,6 +25,9 @@ type GameState = {
   achievements: Achievement[]
   logs: GameEvent[]
   lifetimeRuns: number
+  gameStartAt: number
+  lastAward?: { amount: number; ts: number }
+  alarm: { pending: boolean; countdown: number; triggeredFirst: boolean; triggeredSecond: boolean }
 
   // selectors
   visibleItems: () => StoreItem[]
@@ -31,10 +35,12 @@ type GameState = {
   // actions
   init: () => void
   loadSeedTexts: () => Promise<void>
-  startRun: () => void
+  startRun: (opts?: { alarm?: boolean; timeLimitSec?: number }) => void
   typeChar: (ch: string) => void
   skipText: () => void
   completeRun: () => void
+  maybeTriggerAlarms: () => void
+  tickAlarm: () => void
   buyItem: (id: string) => void
   craftArticle: (count?: number) => void
   craftBook: (count?: number) => void
@@ -80,11 +86,15 @@ export const useGame = create<GameState>()(
       achievements: [],
       logs: [],
       lifetimeRuns: 0,
+      gameStartAt: Date.now(),
+      alarm: { pending: false, countdown: 0, triggeredFirst: false, triggeredSecond: false },
 
       visibleItems: () => get().items.filter(i => i.visible && !i.owned).slice(0, 5),
 
       init: () => {
-        // nothing extra; zustand persist rehydrates
+        // ensure game start timestamp exists
+        const s = get()
+        if (!s.gameStartAt) set({ gameStartAt: Date.now() })
       },
 
       loadSeedTexts: async () => {
@@ -97,14 +107,13 @@ export const useGame = create<GameState>()(
         }
       },
 
-      startRun: () => {
+      startRun: (opts) => {
         const { texts } = get()
         if (!texts.length) return
         const idx = Math.floor(Math.random() * texts.length)
         const text = texts[idx]
-        const alarm = Math.random() < 0.2 // 20% ALARM chance
         set({
-          run: { status: 'active', text, typed: '', correct: 0, wrong: 0, startedAt: Date.now(), alarm },
+          run: { status: 'active', text, typed: '', correct: 0, wrong: 0, startedAt: Date.now(), alarm: !!opts?.alarm, timeLimitSec: opts?.timeLimitSec },
         })
       },
 
@@ -134,7 +143,8 @@ export const useGame = create<GameState>()(
           if (s.player.skips <= 0) return
           set({ player: { ...s.player, skips: s.player.skips - 1 } })
         }
-        set({ run: { status: 'idle', typed: '', correct: 0, wrong: 0 } })
+        // immediately start next text
+        get().startRun()
       },
 
       completeRun: () => {
@@ -175,7 +185,12 @@ export const useGame = create<GameState>()(
           items,
           logs,
           lifetimeRuns,
+          lastAward: { amount: score.charsAwarded, ts: endedAt },
         })
+        // immediately open next text
+        get().startRun()
+        // check alarms after awarding
+        get().maybeTriggerAlarms()
       },
 
       buyItem: (id: string) => {
@@ -263,11 +278,38 @@ export const useGame = create<GameState>()(
           },
         })
       },
+
+      maybeTriggerAlarms: () => {
+        const s = get()
+        if (s.alarm.pending) return
+        const now = Date.now()
+        if (!s.alarm.triggeredFirst && s.player.lifetimeChars >= 1000) {
+          set({ alarm: { ...s.alarm, pending: true, countdown: 5, triggeredFirst: true } , logs: s.logs.concat({ id: `alarm1:${now}`, ts: now, message: 'ALARM incoming: Prepare!' }) })
+          return
+        }
+        if (!s.alarm.triggeredSecond && now - s.gameStartAt >= 10 * 60 * 1000) {
+          set({ alarm: { ...s.alarm, pending: true, countdown: 5, triggeredSecond: true } , logs: s.logs.concat({ id: `alarm2:${now}`, ts: now, message: 'ALARM incoming: Prepare!' }) })
+          return
+        }
+      },
+
+      tickAlarm: () => {
+        const s = get()
+        if (!s.alarm.pending) return
+        const next = s.alarm.countdown - 1
+        if (next <= 0) {
+          set({ alarm: { ...s.alarm, pending: false, countdown: 0 } , logs: s.logs.concat({ id: `alarmStart:${Date.now()}`, ts: Date.now(), message: 'ALARM started!' }) })
+          // start special run with time limit and bonus
+          get().startRun({ alarm: true, timeLimitSec: 30 })
+        } else {
+          set({ alarm: { ...s.alarm, countdown: next } })
+        }
+      },
     }),
     {
       name: 'universal-char-save-v1',
       storage: createJSONStorage(() => localStorage),
-      partialize: (s) => ({ player: s.player, items: s.items, achievements: s.achievements, logs: s.logs }),
+      partialize: (s) => ({ player: s.player, items: s.items, achievements: s.achievements, logs: s.logs, gameStartAt: s.gameStartAt, alarm: s.alarm }),
       version: 1,
     }
   )

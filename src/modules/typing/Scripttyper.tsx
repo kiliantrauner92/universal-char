@@ -9,24 +9,69 @@ function CharSpan({ ch, typed }: { ch: string; typed?: string }) {
 
 export function Scripttyper() {
   const run = useGame(s => s.run)
+  const player = useGame(s => s.player)
+  const items = useGame(s => s.items)
   const start = useGame(s => s.startRun)
   const typeChar = useGame(s => s.typeChar)
   const skip = useGame(s => s.skipText)
+  const alarm = useGame(s => s.alarm)
+  const tickAlarm = useGame(s => s.tickAlarm)
+  const maybeTriggerAlarms = useGame(s => s.maybeTriggerAlarms)
+  const lastAward = useGame(s => s.lastAward)
+
+  const unlimited = items.some(i => i.owned && i.effect.type === 'skip_unlimited')
 
   const [input, setInput] = useState('')
+  const [showAward, setShowAward] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  // Always keep a text open when possible (after welcome complete and no pending alarm)
+  useEffect(() => {
+    if (player.welcomeComplete && !alarm.pending && run.status === 'idle') start()
+  }, [player.welcomeComplete, alarm.pending, run.status, start])
+
+  // Focus typing input when active
   useEffect(() => {
     if (run.status === 'active') inputRef.current?.focus()
+    else setInput('')
   }, [run.status])
 
+  // Time limit auto-complete for ALARM runs
   useEffect(() => {
-    if (run.status !== 'active') setInput('')
-  }, [run.status])
+    if (run.status !== 'active' || !run.startedAt || !run.timeLimitSec) return
+    const id = setInterval(() => {
+      const elapsed = Date.now() - (run.startedAt ?? 0)
+      if (elapsed / 1000 >= (run.timeLimitSec ?? 0)) {
+        useGame.getState().completeRun()
+      }
+    }, 200)
+    return () => clearInterval(id)
+  }, [run.status, run.startedAt, run.timeLimitSec])
+
+  // Alarm countdown ticker
+  useEffect(() => {
+    if (!alarm.pending) return
+    const id = setInterval(() => tickAlarm(), 1000)
+    return () => clearInterval(id)
+  }, [alarm.pending, tickAlarm])
+
+  // Periodically check alarm checkpoints (e.g., 10-minute trigger)
+  useEffect(() => {
+    const id = setInterval(() => maybeTriggerAlarms(), 5000)
+    return () => clearInterval(id)
+  }, [maybeTriggerAlarms])
+
+  // Show award animation when lastAward changes
+  useEffect(() => {
+    if (!lastAward) return
+    setShowAward(true)
+    const t = setTimeout(() => setShowAward(false), 1500)
+    return () => clearTimeout(t)
+  }, [lastAward?.ts])
 
   const onChange = (v: string) => {
     if (run.status !== 'active' || !run.text) return
-    const ch = v.slice(-1) // take the last typed character (we clear after each)
+    const ch = v.slice(-1)
     if (!ch) return
     typeChar(ch)
     setInput('')
@@ -38,18 +83,30 @@ export function Scripttyper() {
   }, [run.status, run.startedAt])
 
   return (
-    <section className="bg-surface p-4 rounded">
+    <section className="relative bg-surface p-4 rounded">
       <div className="flex items-center justify-between mb-2">
         <h2 className="text-xl font-semibold">Scripttyper {run.alarm ? <span className="text-info text-sm">ALARM</span> : null}</h2>
         <div className="space-x-2">
-          <button className="px-3 py-1 rounded bg-accent text-black" onClick={start} disabled={run.status === 'active'}>
-            Start
-          </button>
-          <button className="px-3 py-1 rounded bg-surface2 border border-muted" onClick={skip} disabled={run.status !== 'active'}>
-            Skip
+          <button className="px-3 py-1 rounded bg-surface2 border border-muted disabled:opacity-50" onClick={skip} disabled={alarm.pending || (!unlimited && player.skips <= 0)}>
+            Skip {unlimited ? '' : `(${player.skips})`}
           </button>
         </div>
       </div>
+
+      {/* Award overlay */}
+      {showAward && lastAward ? (
+        <div className="pointer-events-none absolute right-4 top-4 text-accent text-3xl font-bold transition-all duration-700 transform animate-pulse">
+          +{lastAward.amount}
+        </div>
+      ) : null}
+
+      {/* Alarm countdown overlay */}
+      {alarm.pending ? (
+        <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center z-10">
+          <div className="text-info text-6xl font-extrabold">{alarm.countdown}</div>
+          <div className="mt-2 text-muted">ALARM incoming: 30s time limit, extra bonus</div>
+        </div>
+      ) : null}
 
       {run.status === 'active' && run.text ? (
         <div className="space-y-3">
@@ -63,14 +120,14 @@ export function Scripttyper() {
             <div><div className="text-muted text-sm">Correct</div><div className="text-success text-xl">{run.correct}</div></div>
             <div><div className="text-muted text-sm">Wrong</div><div className="text-danger text-xl">{run.wrong}</div></div>
             <div><div className="text-muted text-sm">Typed</div><div className="text-xl">{run.typed.length}/{run.text.body.length}</div></div>
-            <div><div className="text-muted text-sm">Time</div><div className="text-xl">{Math.floor(elapsed/1000)}s</div></div>
+            <div><div className="text-muted text-sm">Time</div><div className="text-xl">{Math.floor(elapsed/1000)}s{run.timeLimitSec ? ` / ${run.timeLimitSec}s` : ''}</div></div>
           </div>
           <input
             ref={inputRef}
             className="w-0 h-0 opacity-0" aria-hidden value={input} onChange={e => onChange(e.target.value)} />
         </div>
       ) : (
-        <p className="text-muted">Press Start to begin typing a random text. You can skip while active.</p>
+        <p className="text-muted">Waiting for the next text...</p>
       )}
     </section>
   )

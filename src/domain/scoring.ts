@@ -38,7 +38,11 @@ export function computeScore(
   const timeBonusPct = items
     .filter(i => i.owned && i.effect.type === 'time_bonus_pct' && i.effect.value)
     .reduce((acc, i) => acc + (i.effect.value ?? 0), 0)
-  const timeBonus = baseTimeBonus * (1 + timeBonusPct)
+  let timeBonus = baseTimeBonus * (1 + timeBonusPct)
+  // ALARM runs grant extra bonus
+  if (metrics.alarm) {
+    timeBonus *= 1.5
+  }
 
   // Char multiplier
   const charsPct = items

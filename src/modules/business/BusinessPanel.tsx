@@ -11,14 +11,10 @@ export function BusinessPanel() {
   return (
     <section className="bg-surface p-4 rounded">
       <h2 className="text-xl font-semibold mb-2">Business</h2>
-      <div className="grid grid-cols-2 gap-4 mb-3">
+      <div className="grid grid-cols-1 gap-4 mb-3">
         <div>
           <div className="text-muted text-sm">Money</div>
           <div className="text-2xl">{p.money.toLocaleString()}</div>
-        </div>
-        <div>
-          <div className="text-muted text-sm">Skips</div>
-          <div className="text-2xl">{p.skips}</div>
         </div>
       </div>
 
