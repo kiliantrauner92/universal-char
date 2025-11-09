@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-bg: #12100E;
+  --color-surface: #1B1714;
+  --color-surface-2: #241F1B;
+  --color-text: #E9E5DF;
+  --color-muted: #C8C2BA;
+  --color-accent: #D4A373;
+  --color-accent-2: #B08968;
+  --color-success: #34D399;
+  --color-danger: #EF4444;
+  --color-info: #60A5FA;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  @apply bg-bg text-text;
+}
