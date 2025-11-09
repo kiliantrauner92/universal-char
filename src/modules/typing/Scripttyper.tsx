@@ -24,6 +24,8 @@ export function Scripttyper() {
   const tickAlarm = useGame(s => s.tickAlarm)
   const maybeTriggerAlarms = useGame(s => s.maybeTriggerAlarms)
   const lastAward = useGame(s => s.lastAward)
+  const commentsQueue = useGame(s => s.comments.queue)
+  const popComment = useGame(s => s.popComment)
 
   const unlimited = items.some(i => i.owned && i.effect.type === 'skip_unlimited')
 
@@ -110,9 +112,27 @@ export function Scripttyper() {
     return Date.now() - run.startedAt
   }, [run.status, run.startedAt, tick])
 
+  // Performance comments display
+  const [showComment, setShowComment] = useState(false)
+  const currentComment = commentsQueue[0]
+  useEffect(() => {
+    if (!currentComment) return
+    setShowComment(true)
+    const t = setTimeout(() => {
+      setShowComment(false)
+      popComment()
+    }, 1600)
+    return () => clearTimeout(t)
+  }, [currentComment?.id, popComment])
+
   return (
     <section className="relative bg-surface p-4 rounded">
       <div className="flex items-center justify-between mb-2">
+        {showComment && currentComment ? (
+          <div className={"absolute left-1/2 -translate-x-1/2 -top-3 px-3 py-1 rounded text-sm " + (currentComment.tone === 'negative' ? 'bg-danger/20 text-danger' : 'bg-accent/20 text-accent')}>
+            {currentComment.text}
+          </div>
+        ) : null}
         <h2 className="text-xl font-semibold">Scripttyper {run.alarm ? <span className="text-info text-sm">ALARM</span> : null}</h2>
         <div className="space-x-2">
           <button className="px-3 py-1 rounded bg-surface2 border border-muted disabled:opacity-50" onClick={skip} disabled={alarm.pending || (!unlimited && player.skips <= 0)}>

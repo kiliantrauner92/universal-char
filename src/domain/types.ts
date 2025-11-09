@@ -76,6 +76,7 @@ export type Player = {
   prices: Prices
   skips: number
   welcomeComplete: boolean
+  driedBonusRedeemed?: boolean
 }
 
 export type GameEvent = {

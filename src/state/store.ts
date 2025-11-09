@@ -17,6 +17,8 @@ export type RunState = {
   timeLimitSec?: number
 }
 
+type PerfComment = { id: string; text: string; tone: 'negative' | 'positive' | 'info' }
+
 type GameState = {
   texts: Text[]
   run: RunState
@@ -28,6 +30,7 @@ type GameState = {
   gameStartAt: number
   lastAward?: { amount: number; ts: number }
   alarm: { pending: boolean; countdown: number; triggeredFirst: boolean; triggeredSecond: boolean }
+  comments: { queue: PerfComment[] }
 
   // selectors
   visibleItems: () => StoreItem[]
@@ -41,6 +44,8 @@ type GameState = {
   completeRun: () => void
   maybeTriggerAlarms: () => void
   tickAlarm: () => void
+  pushComments: (msgs: PerfComment[]) => void
+  popComment: () => void
   buyItem: (id: string) => void
   craftArticle: (count?: number) => void
   craftBook: (count?: number) => void
@@ -90,6 +95,7 @@ export const useGame = create<GameState>()(
       lifetimeRuns: 0,
       gameStartAt: Date.now(),
       alarm: { pending: false, countdown: 0, triggeredFirst: false, triggeredSecond: false },
+      comments: { queue: [] },
 
       visibleItems: () => get().items.filter(i => i.visible && !i.owned).slice(0, 5),
 
@@ -163,12 +169,33 @@ export const useGame = create<GameState>()(
         if (typeof run.alarm === 'boolean') metrics.alarm = run.alarm
         const score = computeScore(run.text.body.length, metrics, s.items)
 
-        const newPlayer: Player = {
+        const msgs: PerfComment[] = []
+        // NEGATIVE: all wrong
+        const allWrong = run.correct === 0 && run.wrong >= (run.text?.body.length ?? 0)
+        if (allWrong) {
+          msgs.push({ id: `c:dried:${endedAt}`, text: 'You dried!', tone: 'negative' })
+        }
+        // POSITIVE: speed + low mistakes
+        const cps = run.correct / Math.max(1, elapsedMs / 1000)
+        const fastCpsThreshold = 6 // starting point, can tune later
+        if (cps >= fastCpsThreshold && run.wrong <= 5) {
+          msgs.push({ id: `c:speed:${endedAt}`, text: 'My name is speed!', tone: 'positive' })
+        }
+        // POSITIVE: flawless
+        if (run.wrong === 0) {
+          msgs.push({ id: `c:flawless:${endedAt}`, text: 'Living the moment', tone: 'positive' })
+        }
+
+        let newPlayer: Player = {
           ...s.player,
           chars: s.player.chars + score.charsAwarded,
           lifetimeChars: s.player.lifetimeChars + score.charsAwarded,
           skips: s.player.skips + 1, // +1 per completed text
           paper: Math.max(0, s.player.paper - 1),
+        }
+
+        if (allWrong && !s.player.driedBonusRedeemed) {
+          newPlayer = { ...newPlayer, chars: newPlayer.chars * 2, driedBonusRedeemed: true }
         }
 
         const lifetimeRuns = s.lifetimeRuns + 1
@@ -191,6 +218,7 @@ export const useGame = create<GameState>()(
           logs,
           lifetimeRuns,
           lastAward: { amount: score.charsAwarded, ts: endedAt },
+          comments: { queue: s.comments.queue.concat(msgs) },
         })
         // immediately open next text if paper remains (or alarm will handle special runs)
         if (get().player.paper > 0) get().startRun()
@@ -316,6 +344,18 @@ export const useGame = create<GameState>()(
         } else {
           set({ alarm: { ...s.alarm, countdown: next } })
         }
+      },
+
+      pushComments: (msgs) => {
+        const s = get()
+        if (!msgs.length) return
+        set({ comments: { queue: s.comments.queue.concat(msgs) } })
+      },
+
+      popComment: () => {
+        const s = get()
+        if (!s.comments.queue.length) return
+        set({ comments: { queue: s.comments.queue.slice(1) } })
       },
     }),
     {
