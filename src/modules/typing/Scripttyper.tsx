@@ -1,10 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useGame } from '../../state/store'
 
-function CharSpan({ ch, typed }: { ch: string; typed?: string }) {
+function CharSpan({ ch, typed, current }: { ch: string; typed?: string; current?: boolean }) {
   let cls = 'text-text'
-  if (typed !== undefined) cls = typed === ch ? 'text-success' : 'text-danger'
-  return <span className={cls}>{ch}</span>
+  if (typed !== undefined) {
+    cls = typed === ch ? 'text-success' : 'text-danger'
+  } else if (current) {
+    // highlight next-to-type character; ensure visibility even for spaces
+    cls = 'text-text underline decoration-accent decoration-2 underline-offset-4 inline-block border-b-2 border-accent min-w-[0.5ch]'
+  }
+  return <span className={cls}>{ch === ' ' && current ? '\u00A0' : ch}</span>
 }
 
 export function Scripttyper() {
@@ -123,7 +128,7 @@ export function Scripttyper() {
           <div className="text-muted text-sm">{run.text.title} • {run.text.genre}</div>
           <div className="p-4 rounded bg-surface2 font-mono text-lg leading-relaxed">
             {run.text.body.split('').map((ch, i) => (
-              <CharSpan key={i} ch={ch} typed={run.typed[i]} />
+              <CharSpan key={i} ch={ch} typed={run.typed[i]} current={i === run.typed.length} />
             ))}
           </div>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
