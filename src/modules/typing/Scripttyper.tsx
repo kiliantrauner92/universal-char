@@ -112,6 +112,12 @@ export function Scripttyper() {
     return Date.now() - run.startedAt
   }, [run.status, run.startedAt, tick])
 
+  const cps = useMemo(() => {
+    if (run.status !== 'active' || !run.startedAt) return 0
+    const secs = Math.max(0.001, elapsed / 1000)
+    return run.correct / secs
+  }, [run.status, run.startedAt, elapsed, run.correct])
+
   // Performance comments display
   const [showComment, setShowComment] = useState(false)
   const currentComment = commentsQueue[0]
@@ -161,11 +167,12 @@ export function Scripttyper() {
               <CharSpan key={i} ch={ch} typed={run.typed[i]} current={i === run.typed.length} />
             ))}
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
             <div><div className="text-muted text-sm">Correct</div><div className="text-success text-xl">{run.correct}</div></div>
             <div><div className="text-muted text-sm">Wrong</div><div className="text-danger text-xl">{run.wrong}</div></div>
             <div><div className="text-muted text-sm">Typed</div><div className="text-xl">{run.typed.length}/{run.text.body.length}</div></div>
             <div><div className="text-muted text-sm">Time</div><div className="text-xl">{Math.floor(elapsed/1000)}s{run.timeLimitSec ? ` / ${run.timeLimitSec}s` : ''}</div></div>
+            <div><div className="text-muted text-sm">Chars/s</div><div className="text-xl">{(Math.round(cps * 10) / 10).toFixed(1)}</div></div>
             <div>
               <div className="text-muted text-sm">Earned</div>
               <div className={showAward ? "text-accent text-xl animate-pulse" : "text-muted text-xl"}>
